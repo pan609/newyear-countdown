@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#03040b">
+<title>新年倒计时 · 世界烟花夜</title>
+<link rel="stylesheet" href="styles.css?v=11">
+</head>
+<body class="is-count">
+
+<div id="stage" aria-hidden="true">
+  <canvas id="sky"></canvas>
+  <canvas id="fxBack"></canvas>
+  <canvas id="scene"></canvas>
+  <canvas id="light"></canvas>
+  <canvas id="rim"></canvas>
+  <canvas id="reflect"></canvas>
+  <canvas id="fxFront"></canvas>
+  <canvas id="glow"></canvas>
+  <canvas id="glow2"></canvas>
+  <div class="vignette"></div>
+</div>
+
+<header class="top ui">
+  <div class="place">
+    <div class="place-city" id="placeCity"></div>
+    <div class="place-sub" id="placeMark"></div>
+    <div class="place-time" id="placeTime"></div>
+    <a class="place-credit" id="placeCredit" target="_blank" rel="noopener" hidden></a>
+  </div>
+  <div class="top-actions">
+    <button class="btn" id="fxBtn" type="button" aria-expanded="false" aria-controls="fxPanel">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/></svg>烟花
+    </button>
+    <button class="btn" id="previewBtn" type="button">预演跨年</button>
+    <button class="btn icon" id="fsBtn" type="button" aria-label="全屏">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="center">
+  <p class="eyebrow" id="eyebrow"></p>
+  <div class="count" id="count" role="timer" aria-label="新年倒计时">
+    <div class="unit"><span class="num" id="dD"></span><span class="lab">天</span></div>
+    <div class="unit"><span class="num" id="dH"></span><span class="lab">时</span></div>
+    <div class="unit"><span class="num" id="dM"></span><span class="lab">分</span></div>
+    <div class="unit"><span class="num" id="dS"></span><span class="lab">秒</span></div>
+  </div>
+  <div class="big" id="big" aria-hidden="true"></div>
+  <div class="cele" id="cele">
+    <div class="cele-year" id="celeYear"></div>
+    <div class="cele-zh">新年快乐</div>
+    <div class="cele-en">HAPPY NEW YEAR</div>
+  </div>
+  <div class="tz ui" role="group" aria-label="倒计时基准">
+    <button type="button" id="tzLocal">我的时间</button>
+    <button type="button" id="tzCity">当地时间</button>
+  </div>
+  <p class="sr" id="srLive" aria-live="polite"></p>
+</main>
+
+<p class="hint ui" id="hint">点击夜空，放一枚烟花</p>
+
+<section class="panel ui" id="panel" aria-label="背景音乐" hidden>
+  <div class="panel-head">
+    <h2>背景音乐</h2>
+    <button class="btn small" id="uploadBtn" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5M7 10l5-5 5 5M5 19h14"/></svg>上传音乐
+    </button>
+  </div>
+  <ul class="tracks" id="tracks"></ul>
+  <p class="panel-tip">可一次选择多首，也可以把音频文件直接拖进页面。文件只保存在这台设备的浏览器里。</p>
+  <div class="seek" id="seekRow">
+    <span id="curTime">0:00</span>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="播放进度">
+    <span id="durTime">0:00</span>
+  </div>
+  <div class="panel-row">
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>
+    <input type="range" id="vol" min="0" max="100" value="70" aria-label="音乐音量">
+    <button class="btn small" id="modeBtn" type="button"></button>
+  </div>
+  <label class="switch">
+    <input type="checkbox" id="sfx" checked>
+    <span class="switch-ui" aria-hidden="true"></span>
+    <span>烟花音效</span>
+  </label>
+</section>
+
+<section class="panel fx ui" id="fxPanel" aria-label="烟花与场景" hidden>
+  <div class="panel-head"><h2>烟花与场景</h2></div>
+  <label class="field-lab" for="wish">祝福语烟花</label>
+  <div class="field-row">
+    <input id="wish" type="text" maxlength="10" placeholder="例如：新年快乐" autocomplete="off">
+    <button class="btn small on" id="wishBtn" type="button">点燃</button>
+  </div>
+  <p class="panel-tip">最多 10 个字。跨年零点，夜空里也会炸出这句话。</p>
+  <div class="field-lab" id="intensityLab">烟花强度</div>
+  <div class="seg" role="group" aria-labelledby="intensityLab" id="intensity">
+    <button type="button" data-v="0">柔和</button><button type="button" data-v="1">标准</button><button type="button" data-v="2">盛大</button>
+  </div>
+  <label class="switch">
+    <input type="checkbox" id="rhythm" checked>
+    <span class="switch-ui" aria-hidden="true"></span>
+    <span>跟随音乐节拍燃放</span>
+  </label>
+  <div class="field-lab">自定义背景</div>
+  <div class="field-row">
+    <button class="btn small" id="bgBtn" type="button">上传夜景照片</button>
+    <button class="btn small" id="bgClear" type="button" hidden>移除</button>
+  </div>
+  <p class="panel-tip">建议用天空较暗的横幅夜景，页面会自动把天空和建筑分开。照片只保存在这台设备的浏览器里。</p>
+</section>
+
+<footer class="dock ui">
+  <nav class="cities" id="cities" aria-label="选择城市"></nav>
+  <div class="music">
+    <button class="btn icon" id="prevBtn" type="button" aria-label="上一首">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M18 6v12l-9-6zM6 6h2v12H6z"/></svg>
+    </button>
+    <button class="btn icon play" id="playBtn" type="button" aria-label="播放音乐">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill i-play" d="M8 5v14l11-7z"/><path class="fill i-pause" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+    </button>
+    <button class="btn icon" id="nextBtn" type="button" aria-label="下一首">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M6 6v12l9-6zM16 6h2v12h-2z"/></svg>
+    </button>
+    <button class="track" id="trackBtn" type="button" aria-expanded="false" aria-controls="panel">
+      <span class="track-name" id="trackName"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg>
+    </button>
+  </div>
+</footer>
+
+<input type="file" id="bgFile" accept="image/*" hidden>
+<input type="file" id="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac" multiple hidden>
+<div class="drop" id="drop" hidden><div>松开，添加为背景音乐</div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/scenes.js?v=11"></script>
+<script src="js/fireworks.js?v=11"></script>
+<script src="js/audio.js?v=11"></script>
+<script src="js/main.js?v=11"></script>
+</body>
+</html>
