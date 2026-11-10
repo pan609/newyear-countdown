@@ -24,7 +24,7 @@
   let layout = null, placeFmt = null;
 
   function build() {
-    const w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(320, window.innerWidth), h = Math.max(320, window.innerHeight), dpr = Math.min(window.devicePixelRatio || 1, 2);
     layout = (scene.ph ? renderPhoto : renderScene)(scene, $('sky'), $('scene'), w, h, dpr);
     fw.resize(w, h, dpr);
     fw.setScene(layout, $('scene'));
