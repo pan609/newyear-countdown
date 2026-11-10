@@ -2,7 +2,7 @@
   "project": "newyear-countdown",
   "ownership": "personal",
   "updated": "2026-11-10",
-  "status": "第二版：实景夜景 + 烟花引擎 v2，未建 git 仓库",
+  "status": "已发布到 GitHub Pages：https://pan609.github.io/newyear-countdown/（公开仓库 pan609/newyear-countdown）",
   "done": [
     "倒计时（我的时间 / 当地时间）、最后十秒读秒、跨年终场烟花、预演跨年",
     "7 座城市实景照片背景：天空自动抠图，烟花被建筑遮挡、照亮建筑、映在水面；file:// 下回退手绘场景",
@@ -12,7 +12,9 @@
     "烟花引擎 v2：发光星体、星芒、锦冠/爆裂/子母弹/土星环、水岸扇面与喷泉、双层泛光、硝烟",
     "融合：建筑 color-dodge 受光、轮廓光、整体曝光、震动、泛光遵守遮挡、拉长的水面倒影",
     "烟花面板：祝福语烟花、强度三档、跟随音乐节拍、自定义背景上传",
-    "内置歌曲 Nothing's Gonna Change My Love for You（用户提供）"
+    "内置歌曲 Nothing's Gonna Change My Love for You（用户提供）",
+    "发布到 GitHub Pages；歌曲以 AES-GCM 加密文件随站发布，凭分享链接 # 后的口令解锁（口令见本机 ~/.secrets/ops/newyear-countdown.md）",
+    "修复窗口尺寸为 0 时初始化崩溃"
   ],
   "verified": [
     "1280x800 下逐城市截图检查（手动推进动画帧）",
@@ -23,8 +25,6 @@
   "todo": [
     "前台实时帧率与低端机性能未测（验证时预览面板在后台，逐帧手动推进）",
     "音乐节拍跟随只验证了触发逻辑，未用真实播放验证",
-    "人耳试听音效与音量",
-    "公开发布前处理商业歌曲版权",
-    "是否 git init（用户暂不需要）"
+    "人耳试听音效与音量"
   ]
 }
