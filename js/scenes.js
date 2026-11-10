@@ -416,7 +416,37 @@
     c.lineTo(w, hy + 2); c.closePath(); c.fill();
   }
 
+  /* ---------------- 童话城堡（仅在照片不可用时兜底） ---------------- */
+  function castle(c, R, L) {
+    const tower = (x, wd, y0, y1, cone, roof) => {
+      c.fillStyle = lg(c, x - wd, 0, x + wd, 0, ['#5a4a78', '#e9d9f2', '#7b6a9c']);
+      c.fillRect(x - wd, y0, wd * 2, y1 - y0);
+      c.fillStyle = roof || '#3b4fc4';
+      c.beginPath(); c.moveTo(x - wd * 1.25, y1); c.lineTo(x, y1 + cone); c.lineTo(x + wd * 1.25, y1); c.closePath(); c.fill();
+      L.mount(x, y1 + cone, x * 60);
+    };
+    glowOn(c, 'rgba(255,170,230,.45)', 22);
+    c.fillStyle = lg(c, -.42, 0, .42, 0, ['#4d3f6e', '#d9c4e6', '#f6e9f6', '#d9c4e6', '#4d3f6e']);
+    c.fillRect(-.42, 0, .84, .3); c.fillRect(-.24, .3, .48, .16);
+    glowOff(c);
+    c.fillStyle = '#3b4fc4';
+    c.beginPath(); c.moveTo(-.44, .3); c.lineTo(-.3, .4); c.lineTo(.3, .4); c.lineTo(.44, .3); c.closePath(); c.fill();
+    tower(-.4, .035, 0, .36, .16); tower(.4, .035, 0, .36, .16);
+    tower(-.24, .03, .3, .5, .15); tower(.2, .03, .3, .56, .17, '#6b4fd0');
+    tower(-.08, .028, .44, .64, .14); tower(.05, .04, .44, .78, .22);
+    c.fillStyle = '#1a1230'; c.beginPath(); c.moveTo(-.05, 0); c.lineTo(-.05, .09); c.quadraticCurveTo(0, .15, .05, .09); c.lineTo(.05, 0); c.closePath(); c.fill();
+    wins(c, R, -.38, .05, .38, .27, 16, 4, .55, .9);
+    for (let i = 0; i < 40; i++) L.spark((R() - .5) * .8, R() * .34);
+  }
+
   const SCENES = [
+    {
+      id: 'castle', city: '童话城堡', country: '奥兰多', mark: '灰姑娘城堡', tz: 'America/New_York', seed: 97, show: true,
+      horizon: .86, top: .62, span: 1.1, ox: 0, draw: castle,
+      sky: ['#010208', '#05061c', '#1a1038'], glow: 'rgba(255,120,220,.24)', ground: ['#06060f', '#020207'],
+      far: { minW: .03, maxW: .07, minH: .01, maxH: .05, fill: '#0e0d22', win: .08 },
+      near: { minW: .035, maxW: .08, minH: .01, maxH: .05, fill: '#07070f', win: .16, env: x => (Math.abs(x) > .55 ? 1 : 0) }
+    },
     {
       id: 'sydney', city: '悉尼', country: '澳大利亚', mark: '悉尼歌剧院 · 海港大桥', tz: 'Australia/Sydney', seed: 11,
       horizon: .8, top: .5, span: 2.2, ox: .12, draw: sydney,
@@ -582,6 +612,15 @@
    * 坐标均为照片内的比例（0~1）。base = 水面/地平线，top = 地标顶端，focus = 横向视觉重心。 */
   const arch = [[.05, .155], [.15, .175], [.25, .195], [.35, .22], [.45, .25], [.55, .29], [.65, .345], [.75, .405]];
   const PHOTOS = {
+    castle: {
+      /* 原片里自带一朵红色烟花：夜空整体换成干净的渐变，key 把偏红的像素一律归为天空。
+       * contain：不要求照片铺满屏宽，而是按屏高定城堡大小（fill），城堡底线（ground）落在屏高的 sit 处 */
+      src: 'images/castle.jpg', contain: true, fill: .76, cw: .43, ground: .87, sit: .9,
+      base: .8, skyTo: .8, top: .17, focus: .649, dim: 0, water: false, jump: 0, small: 1, key: 'red', cut: [[0, 0, 1, .148]],   // cut：塔尖最上面那截没打灯，是黑的，留着只会剩一圈毛边
+      sky: ['#010207', '#02041a', '#0b0a26'], proj: [.43, 0, .87, .89],
+      mounts: [[.677, .17, 0], [.621, .255, -10], [.593, .36, -16], [.733, .405, 14], [.573, .48, -24], [.487, .51, -34], [.8, .565, 34]],
+      credit: ['Dancorona21', 'CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:Cinderella%27s_Castle_at_Night.jpg']
+    },
     sydney: {
       src: 'images/sydney.jpg', base: .765, top: .3, focus: .6, dim: 0, water: true, jump: 5, solid: [[0, .495, .86, .537]], seeds: [[.2, .62], [.45, .6]],
       mounts: arch.map((p, i) => [p[0], p[1], (i - 3.5) * 5]).concat([[.925, .36, 0]]),
@@ -639,12 +678,23 @@
       for (let y = Math.floor(r[1] * H); y < r[3] * H; y++) for (let x = Math.floor(r[0] * W); x < r[2] * W; x++) lum[y * W + x] = 999;
     });
     const band = Array.from(lum.subarray(0, W * Math.max(4, Math.round(H * .06)))).sort((a, b) => a - b);
+    const forced = P.cut || P.key ? new Uint8Array(N) : null, med = band[band.length >> 1];
+    (P.cut || []).forEach(r => {    // 手工标注的「一定是天空」区域（例如原片里已有的烟花）
+      for (let y = Math.floor(r[1] * H); y < r[3] * H; y++) for (let x = Math.floor(r[0] * W); x < r[2] * W; x++) {
+        const i = y * W + x; forced[i] = 1; lum[i] = med; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = med;
+      }
+    });
     const cap = P.cap || Math.min(170, band[band.length >> 1] * 1.9 + 34);
+    if (P.key === 'red') for (let i = 0; i < N; i++) {   // 原片里的红色烟花和红烟
+      const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+      if (r > 1.7 * g + 8 && r > 1.5 * b + 8) { forced[i] = 1; lum[i] = med; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = med; }
+    }
     const tol = P.tol || 9, strict = P.strict || 12, J = P.jump || 0, lim = Math.floor(H * (P.skyTo || P.base));
     const dist = (a, b) => Math.abs(d[a * 4] - d[b * 4]) + Math.abs(d[a * 4 + 1] - d[b * 4 + 1]) + Math.abs(d[a * 4 + 2] - d[b * 4 + 2]);
     const sky = new Uint8Array(N), stack = new Int32Array(N), ref = new Float32Array(N), rt = P.rt || 11;
     let sp = 0;
     for (let x = 0; x < W; x++) if (lum[x] < cap) { sky[x] = 1; ref[x] = lum[x]; stack[sp++] = x; }
+    if (forced) for (let i = W; i < N; i++) if (forced[i] && !sky[i]) { sky[i] = 1; ref[i] = med; stack[sp++] = i; }
     (P.seeds || []).forEach(q => {   // 被实体围住、从顶边到不了的天空（例如桥面下方）
       const i = Math.floor(q[1] * H) * W + Math.floor(q[0] * W);
       if (!sky[i] && lum[i] < cap) { sky[i] = 1; ref[i] = lum[i]; stack[sp++] = i; }
@@ -679,7 +729,7 @@
       }
     }
     /* 只清掉小块的悬浮前景；大块的（例如塔基被暗树丛「断开」的铁塔）要留下 */
-    const small = N * .0012, comp = [];
+    const small = N * (P.small || .0012), comp = [];
     for (let i0 = 0; i0 < lim * W; i0++) {
       if (keep[i0] || sky[i0]) continue;
       comp.length = 0; sp = 0; keep[i0] = 2; stack[sp++] = i0;
@@ -729,16 +779,31 @@
 
   function renderPhoto(sc, skyCv, sceneCv, w, h, dpr) {
     const P = sc.photo, img = sc.ph.img, iw = img.naturalWidth, ih = img.naturalHeight;
-    const s = Math.max(w / iw, h * .62 / ih), dw = iw * s, dh = ih * s;
-    const dx = Math.min(0, Math.max(w - dw, w / 2 - P.focus * dw));
-    let dy = Math.max(h - dh, .31 * h - P.top * dh);
-    dy = Math.max(h - dh, Math.min(dy, .9 * h - P.base * dh));
+    let s, dw, dh, dx, dy;
+    if (P.contain) {
+      const fill = w > h && h < 520 ? Math.min(.92, P.fill + .12) : P.fill;   // 横屏手机很矮，城堡放大一些
+      s = Math.min(h * fill / ih, w * .94 / (P.cw * iw)); dw = iw * s; dh = ih * s;
+      dx = w / 2 - P.focus * dw; dy = h * P.sit - P.ground * dh;
+    } else {
+      s = Math.max(w / iw, h * (P.fill || .62) / ih); dw = iw * s; dh = ih * s;
+      dx = Math.min(0, Math.max(w - dw, w / 2 - P.focus * dw));
+      dy = Math.max(h - dh, .31 * h - P.top * dh);
+      dy = Math.max(h - dh, Math.min(dy, .9 * h - P.base * dh));
+    }
     const hy = Math.round(dy + P.base * dh);
 
     const c0 = size(skyCv, w, h, dpr);
     c0.fillStyle = '#02030a'; c0.fillRect(0, 0, w, h);
     c0.imageSmoothingQuality = 'high';
-    if (dy > 0) {
+    if (P.sky) {
+      c0.fillStyle = lg(c0, 0, 0, 0, hy, P.sky); c0.fillRect(0, 0, w, h);
+      const gx = dx + P.focus * dw, gy = dy + P.base * dh, gr = dh * .75, rg = c0.createRadialGradient(gx, gy, 0, gx, gy, gr);
+      rg.addColorStop(0, 'rgba(70,40,120,.34)'); rg.addColorStop(.5, 'rgba(40,24,90,.12)'); rg.addColorStop(1, 'rgba(20,10,60,0)');
+      c0.fillStyle = rg; c0.fillRect(0, 0, w, h);
+      const ly = dy + (P.skyTo || P.base) * dh;   // 贴近地面的一段压到全黑，和照片里的暗地面接上
+      c0.fillStyle = lg(c0, 0, ly - dh * .1, 0, ly, ['rgba(1,1,4,0)', 'rgba(1,1,4,1)']); c0.fillRect(0, ly - dh * .1, w, dh * .1);
+      c0.fillStyle = '#010104'; c0.fillRect(0, ly - 1, w, h);
+    } else if (dy > 0) {
       /* 照片不够高：把顶部一条天空的颜色向上延伸，再让照片顶端渐隐进去 */
       const strip = document.createElement('canvas'); strip.width = 40; strip.height = 1;
       strip.getContext('2d').drawImage(img, 0, ih * .01, iw, ih * .04, 0, 0, 40, 1);
@@ -759,11 +824,16 @@
     c.drawImage(img, dx, dy, dw, dh);
     c.globalCompositeOperation = 'destination-in';
     c.drawImage(sc.ph.matte, dx, dy, dw, dh);
+    if (P.contain) {   // 照片没铺满屏宽：把地面那一条黑补到两边，否则光柱根部会在照片边缘露出一条竖线
+      c.globalCompositeOperation = 'destination-over'; c.fillStyle = '#010104'; c.fillRect(0, dy + (P.skyTo || P.base) * dh - .5, w, h);
+    }
     c.globalCompositeOperation = 'source-over';
 
     const map = p => ({ x: dx + p[0] * dw, y: dy + p[1] * dh, a: p[2] || 0 });
     return {
       w, h, hy, u: Math.min(h * .42, w * .5), ox: w / 2, water: !!P.water, photo: true,
+      cx: dx + P.focus * dw, topY: dy + P.top * dh,
+      proj: P.proj ? { x: dx + P.proj[0] * dw, y: dy + P.proj[1] * dh, w: (P.proj[2] - P.proj[0]) * dw, h: (P.proj[3] - P.proj[1]) * dh } : null,
       mounts: (P.mounts || []).map(map), sparks: P.sparks ? P.sparks(rng(sc.seed)).map(map) : []
     };
   }

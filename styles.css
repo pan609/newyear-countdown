@@ -6,7 +6,8 @@
   --glass: rgba(8, 11, 24, .58);
   --line: rgba(255, 255, 255, .13);
   --serif: "Didot", "Bodoni 72", "Songti SC", "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
-  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  /* 中文字体放在系统字体前面：个别环境（例如 iOS 模拟器）缺苹方时，系统字体会直接画出方框而不往后找 */
+  --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Songti SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --num: clamp(40px, 12.5vw, 124px);
 }
 
@@ -34,7 +35,10 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #stage { position: fixed; inset: 0; cursor: crosshair; transition: opacity .4s ease; touch-action: manipulation; }
 #stage.swap { opacity: 0; }
 #stage canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
-#sky, #scene { filter: brightness(var(--exp, 1)); }
+#sky { filter: brightness(var(--exp, 1)); }
+#scene { filter: brightness(calc(var(--exp, 1) * var(--dim, 1))); }
+#beams { display: none; mix-blend-mode: screen; filter: blur(3px); }
+#proj { display: none; mix-blend-mode: screen; filter: brightness(var(--exp, 1)); }
 #light { mix-blend-mode: color-dodge; }
 #rim { mix-blend-mode: screen; }
 #glow2 { mix-blend-mode: screen; filter: blur(26px); opacity: .9; }
@@ -260,6 +264,13 @@ input[type="range"] { flex: 1; min-width: 0; height: 24px; margin: 0; background
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* 手机上全屏模糊很贵：泛光层本身就是低分辨率放大的，模糊半径减半，光柱不再额外模糊 */
+@media (max-width: 760px), (max-height: 520px) {
+  #beams { filter: none; }
+  #glow { filter: blur(4px); }
+  #glow2 { filter: blur(12px); }
+}
+
 /* ---------- narrow screens ---------- */
 @media (max-width: 760px) {
   .dock { flex-direction: column; align-items: stretch; width: calc(100% - 24px); border-radius: 20px; }
@@ -270,12 +281,73 @@ input[type="range"] { flex: 1; min-width: 0; height: 24px; margin: 0; background
   .panel.fx { right: 12px; bottom: auto; }
   .top-actions .btn { padding: 0 11px; }
   .place-city { font-size: 22px; }
+  .center { top: clamp(128px, 17vh, 150px); }
+  .place-sub, .place-time { white-space: nowrap; }
   .hint { bottom: 200px; }
 }
 @media (max-height: 560px) {
   .center { top: 64px; }
   :root { --num: clamp(36px, 15vh, 84px); }
   .hint { display: none; }
+}
+
+/* ---------- 手机横屏：高度只有三四百像素，所有界面收到四边，把中间留给城堡和烟花 ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  :root { --num: clamp(24px, 9.5vh, 40px); }
+  .top { padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left)); }
+  .place-city { font-size: 17px; }
+  .place-sub { display: none; }
+  .place-time { margin-top: 1px; font-size: 10px; }
+  .place-credit { margin-top: 0; padding: 2px 0; font-size: 9px; }
+  .btn { min-height: 34px; padding: 0 11px; font-size: 12px; }
+  .btn.icon { width: 34px; }
+  .top-actions { gap: 6px; }
+
+  .center { top: max(6px, env(safe-area-inset-top)); padding: 0 150px; }
+  .eyebrow { margin-bottom: 2px; font-size: 10px; letter-spacing: .3em; text-indent: .3em; }
+  .count { gap: clamp(8px, 1.6vw, 18px); }
+  .lab { margin-top: 1px; font-size: 9px; }
+  .tz { margin-top: 5px; padding: 2px; }
+  .tz button { min-height: 24px; padding: 0 10px; font-size: 11px; }
+  .big { font-size: 40vh; margin-top: 3vh; }
+  .cele-year { font-size: 24vh; }
+  .cele-zh { margin-top: 2px; font-size: 7.5vh; }
+  .cele-en { margin-top: 4px; font-size: 9px; }
+  body.is-celebrate .eyebrow { margin-top: 6px; }
+
+  .dock {
+    flex-direction: row; align-items: center; width: auto; border-radius: 18px; padding: 4px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    max-width: calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
+  }
+  .cities { padding: 0 6px 0 0; border-bottom: 0; border-right: 1px solid var(--line); }
+  .city { min-height: 34px; padding: 0 10px; font-size: 12px; border-radius: 14px; }
+  .music { flex: none; }
+  .music .btn { min-height: 34px; }
+  .music .btn.icon { width: 34px; }
+  .track { flex: none; min-height: 34px; max-width: 132px; font-size: 12px; }
+
+  .panel, .panel.fx {
+    top: auto; bottom: calc(max(8px, env(safe-area-inset-bottom)) + 50px);
+    right: max(12px, env(safe-area-inset-right)); padding: 12px 14px;
+    max-height: calc(100vh - max(8px, env(safe-area-inset-bottom)) - 62px); max-height: calc(100dvh - max(8px, env(safe-area-inset-bottom)) - 62px);
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .panel.fx { top: calc(max(8px, env(safe-area-inset-top)) + 42px); bottom: auto; max-height: calc(100vh - max(8px, env(safe-area-inset-top)) - 104px); max-height: calc(100dvh - max(8px, env(safe-area-inset-top)) - 104px); }
+  .tracks { max-height: 96px; }
+  .field-lab { margin: 10px 0 6px; }
+  .panel-tip { margin-top: 6px; }
+  .toast { top: max(8px, env(safe-area-inset-top)); }
+  .vignette { background: radial-gradient(120% 100% at 50% 50%, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, .45) 100%); }
+}
+
+/* 横屏且浏览器工具栏还占着一截高度（iPhone Safari 约 290px）：倒计时再收一档 */
+@media (orientation: landscape) and (max-height: 340px) {
+  :root { --num: 26px; }
+  .eyebrow { font-size: 9px; margin-bottom: 0; }
+  .tz { margin-top: 3px; }
+  .tz button { min-height: 22px; font-size: 10px; }
+  .place-city { font-size: 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

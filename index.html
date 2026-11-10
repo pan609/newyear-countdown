@@ -4,15 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#03040b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>新年倒计时 · 世界烟花夜</title>
-<link rel="stylesheet" href="styles.css?v=13">
+<link rel="stylesheet" href="styles.css?v=31">
 </head>
 <body class="is-count">
 
 <div id="stage" aria-hidden="true">
   <canvas id="sky"></canvas>
   <canvas id="fxBack"></canvas>
+  <canvas id="beams"></canvas>
   <canvas id="scene"></canvas>
+  <canvas id="proj"></canvas>
   <canvas id="light"></canvas>
   <canvas id="rim"></canvas>
   <canvas id="reflect"></canvas>
@@ -138,9 +143,10 @@
 <div class="drop" id="drop" hidden><div>松开，添加为背景音乐</div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="js/scenes.js?v=13"></script>
-<script src="js/fireworks.js?v=13"></script>
-<script src="js/audio.js?v=13"></script>
-<script src="js/main.js?v=13"></script>
+<script src="js/scenes.js?v=31"></script>
+<script src="js/fireworks.js?v=31"></script>
+<script src="js/audio.js?v=31"></script>
+<script src="js/show.js?v=31"></script>
+<script src="js/main.js?v=31"></script>
 </body>
 </html>

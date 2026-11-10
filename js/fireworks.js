@@ -59,13 +59,13 @@
     const bctx = ctxOf(cv.back), fctx = ctxOf(cv.front), gctx = ctxOf(cv.glow), g2ctx = ctxOf(cv.glow2);
     const lctx = ctxOf(cv.light), mctx = ctxOf(cv.rim), rctx = ctxOf(cv.reflect);
     const mask = document.createElement('canvas'), rimMask = document.createElement('canvas'), pre = document.createElement('canvas'), g3ctx = pre.getContext('2d');
-    const parts = [], rockets = [], lights = [], emitters = [], flashes = [], smokes = [];
+    const parts = [], rockets = [], lights = [], emitters = [], flashes = [], smokes = [], pixies = [];
     let queue = [];
     let w = 1, h = 1, fs = 1, k = 1, gw = 1, gh = 1, lw = 1, lh = 1, rh = 1;
     let L = { hy: 1, u: 1, ox: 0, water: false, mounts: [], sparks: [] };
     let time = 0, q = 1, calm = false, idle = 0, slow = 0, level = 1;
     let mode = 'ambient', nextAuto = 600, nextSet = 6000, beats = 0;
-    let expo = 0, lastExpo = -1, shake = 0, shaking = false, pops = 0;
+    let expo = 0, lastExpo = -1, shake = 0, shaking = false, pops = 0, gs = 1;
 
     /* ---------- 尺寸与场景 ---------- */
     function resize(W, H, dpr) {
@@ -77,7 +77,7 @@
       cv.glow2.width = Math.ceil(gw / 2); cv.glow2.height = Math.ceil(gh / 2);
       lw = Math.ceil(w / 2); lh = Math.ceil(h / 2);
       [cv.light, cv.rim, mask, rimMask].forEach(c => { c.width = lw; c.height = lh; });
-      if (w < 700) q = Math.min(q, .65);
+      if (Math.min(w, h) < 520) q = Math.min(q, .65);   // 手机（竖屏或横屏）先用较少的粒子
     }
     function setScene(layout, sceneCv) {
       L = layout;
@@ -102,7 +102,7 @@
       clear();
     }
     function clear() {
-      parts.length = rockets.length = lights.length = emitters.length = flashes.length = smokes.length = 0;
+      parts.length = rockets.length = lights.length = emitters.length = flashes.length = smokes.length = pixies.length = 0;
       queue = [];
       bctx.clearRect(0, 0, w, h); fctx.clearRect(0, 0, w, h);
       gctx.clearRect(0, 0, gw, gh); g2ctx.clearRect(0, 0, gw, gh);
@@ -115,7 +115,7 @@
     function spawn(x, y, vx, vy, ttl, c, size, ex) {
       if (parts.length >= MAX) return;
       const p = { x, y, px: x, py: y, vx, vy, age: 0, ttl, c, size, drag: .965, grav: .035, hold: .45, hot: .1, head: 3.2,
-        trail: 0, tc: null, tglit: 0, glit: 0, tw: 0, split: 0, pop: 0, c2: null, sw: .55, front: false };
+        trail: 0, tc: null, tglit: 0, glit: 0, tw: 0, tws: .42, wander: 0, split: 0, pop: 0, c2: null, sw: .55, front: false };
       if (ex) for (const key in ex) p[key] = ex[key];
       parts.push(p);
     }
@@ -138,7 +138,7 @@
     function burst(x, y, type, o) {
       o = o || {};
       type = type || pick(TYPES);
-      const scale = o.scale || 1, sc = scale * k, front = !!o.front;
+      const scale = (o.scale || 1) * gs, sc = scale * k, front = !!o.front;
       const S = 8.4 * sc, sz = 1.75 * Math.sqrt(k);
       const n = m => Math.max(8, Math.round(m * q * Math.pow(scale, .9)));
       const c1 = o.col || pick(BRIGHT);
@@ -184,6 +184,14 @@
           }
           break;
         }
+        case 'brocade':  // 金丝菊：又密又细的金色长丝，末端转白
+          lc = o.col || C.gold; lk = 1.15;
+          sphere(x, y, n(200), S * 1.04, o.col || C.gold, 150, sz * .82, { front, trail: .75, tc: o.col ? null : C.amber, tglit: .03, drag: .972, grav: .044, hold: .45, head: 2.3, glit: .03, c2: C.white, sw: .62 }); break;
+        case 'bees':     // 游走星：炸开后各自乱窜
+          sphere(x, y, n(84), S * .46, c1, 125, sz, { front, wander: .5, drag: .982, grav: .004, trail: .55, head: 2.6, hold: .3 }); break;
+        case 'glitter':  // 满天闪烁的银星
+          lc = C.silver;
+          sphere(x, y, n(210), S * 1.08, o.col || C.white, 200, sz, { front, tw: rand(.8, 1.2), tws: .25, drag: .95, grav: .012, glit: .09, hold: .3 }); break;
         case 'heart': {
           const m = n(110);
           for (let i = 0; i < m; i++) {
@@ -201,7 +209,7 @@
       }
       const inten = Math.min(1.5, (.55 + scale * .5) * lk);
       lights.push({ x, y, c: lc, i: inten, rad: S * 34, wt: Math.min(1.3, scale) });
-      flashes.push({ x, y, r: S * 9, i: 1, front });
+      flashes.push({ x, y, r: S * 6.5, i: 1, front });
       smokes.push({ x, y, r: S * 15, a: .07 * Math.min(1.4, scale), age: 0, c: lc });
       if (!calm) shake = Math.min(5, shake + scale * scale * 1.5);
       if (cb.onBurst) cb.onBurst(scale, x / w, type);
@@ -238,9 +246,9 @@
       rockets.push({ x, y: y0, px: x, py: y0, vx: o.vx != null ? o.vx : rand(-.35, .35) * k, vy, g, type, o, fuse: 0, age: 0, front: !!o.front });
     }
     function comet(m, type, o, v) {   // 斜向射出的彗星弹
-      const a = (m.a + rand(-6, 6)) * Math.PI / 180;
+      const a = (m.a + (o.exact ? 0 : rand(-6, 6))) * Math.PI / 180;
       v = (v || rand(5.2, 7)) * k;
-      rockets.push({ x: m.x, y: m.y, px: m.x, py: m.y, vx: Math.sin(a) * v, vy: -Math.cos(a) * v, g: .05 * k, type, o, fuse: o.fuse || rand(20, 30), age: 0, front: !!o.front, tail: 1 });
+      rockets.push({ x: m.x, y: m.y, px: m.x, py: m.y, vx: Math.sin(a) * v, vy: -Math.cos(a) * v, g: (o.g != null ? o.g : .05) * k, type, o, fuse: o.fuse || rand(20, 30), age: 0, front: !!o.front, tail: o.tail || 1, tc: o.tc || null });
     }
     /* 水岸/地面的扇形齐射 */
     function fan(x, count, spread, c, type) {
@@ -266,6 +274,35 @@
       const cc = c || pick(BRIGHT);
       L.mounts.forEach((m, i) => at(i * (stagger || 0), () => comet(m, type || pick(['peony', 'strobe', 'crackle']), { scale: rand(.3, .44), col: cc, front: true })));
     }
+
+    /* ---------- 烟花秀用的编排积木 ---------- */
+    function mine(x, c, o) {   // 地面礼花弹：一束星从地面直接喷向夜空
+      o = o || {};
+      const m = Math.round((o.n || 46) * q), a0 = (o.a || 0) * Math.PI / 180, sp = (o.spread || 24) * Math.PI / 180, pw = (o.pow || 1) * k;
+      for (let i = 0; i < m; i++) {
+        const a = a0 + rand(-sp, sp) * rand(.25, 1), v = rand(7, 15.5) * pw;
+        spawn(x, L.hy - 2, Math.sin(a) * v, -Math.cos(a) * v, rand(46, 86), Math.random() < .2 ? C.white : c, 1.6 * Math.sqrt(k),
+          { drag: .955, grav: .07, hold: .5, trail: o.trail != null ? o.trail : .35, head: 2.8, glit: .05, tw: o.tw || 0, tws: .3, pop: o.pop || 0 });
+      }
+      lights.push({ x, y: L.hy - 60 * k, c, i: .7, rad: 150 * k, wt: .45 });
+      flashes.push({ x, y: L.hy - 4, r: 15 * k, i: 1, front: false });
+      if (cb.onBurst) cb.onBurst(.5, x / w, 'mine');
+    }
+    function field(c, count, o) {   // 整片夜空的闪烁星幕
+      o = o || {};
+      const m = Math.round(count * q), batches = 10, y0 = o.y0 != null ? o.y0 : .03, y1 = o.y1 != null ? o.y1 : .94;
+      for (let b = 0; b < batches; b++) at(b * (o.dur || 900) / batches, () => {
+        for (let i = 0; i < m / batches; i++) spawn(rand(.02, .98) * w, rand(y0, y1) * L.hy, rand(-.12, .12), rand(.08, .4), rand(110, 210), Math.random() < .25 ? C.white : c, 1.7 * Math.sqrt(k),
+          { drag: .99, grav: .006, tw: rand(.7, 1.3), tws: 0, hold: .3, hot: .2, head: 3, glit: .12 });
+      });
+      lights.push({ x: w / 2, y: L.hy * .4, c, i: .5, rad: w * .3, wt: .4 });
+    }
+    function streak(x, a, c, o) {  // 斜向长彗星：不炸开，只留下一道亮尾
+      o = o || {};
+      comet({ x, y: L.hy - 2, a }, 'peony', { silent: true, exact: true, tail: 2, tc: c, fuse: o.fuse || 64, g: .045 }, o.v || 10.5);
+      if (cb.onBurst) cb.onBurst(.35, x / w, 'mine');
+    }
+    function pixie(x0, y0, x1, y1, arc, ms, c, done) { pixies.push({ x0, y0, x1, y1, arc, dur: ms / 16.67, t: 0, c: c || C.gold, done }); }
 
     /* ---------- 编排 ---------- */
     function autoShell(big) {
@@ -344,7 +381,7 @@
       nextAuto = Math.max(nextAuto, time + 900);
     }
     function director() {
-      const base = { ambient: 1, build: 2.4, celebrate: 1.9, finale: 1.3 }[mode];
+      const base = { ambient: 1, build: 2.4, celebrate: 1.9, finale: 1.3 }[mode];   // show / quiet：不自动燃放
       if (!base) return;
       const dens = base * [.55, 1, 1.7][level] * (calm ? .4 : 1);
       if (time >= nextAuto) {
@@ -372,14 +409,28 @@
         }
       }
 
+      for (let i = pixies.length - 1; i >= 0; i--) {   // 划过夜空的仙尘流星
+        const s = pixies[i];
+        s.t += dt;
+        const u = Math.min(1, s.t / s.dur), e = u * u * (3 - 2 * u);
+        const x = s.x0 + (s.x1 - s.x0) * e, y = s.y0 + (s.y1 - s.y0) * e - Math.sin(u * Math.PI) * s.arc;
+        for (let j = 0; j < 3; j++) spawn(x + rand(-2, 2), y + rand(-2, 2), rand(-.7, .7), rand(-.3, .9), rand(34, 86), Math.random() < .5 ? C.white : s.c, 1.3 * Math.sqrt(k),
+          { drag: .96, grav: .022, hold: .8, hot: .3, head: 2.4, glit: .28, tw: 1, tws: .2, front: true });
+        flashes.push({ x, y, r: 7 * k, i: .55, front: true });
+        if (u >= 1) { pixies.splice(i, 1); if (s.done) s.done(x, y); }
+      }
+
       for (let i = rockets.length - 1; i >= 0; i--) {
         const r = rockets[i];
         r.age += dt; r.vy += r.g * dt;
         if (r.drag) { const d = Math.pow(r.drag, dt); r.vx *= d; r.vy *= d; }
         r.px = r.x; r.py = r.y; r.x += r.vx * dt; r.y += r.vy * dt;
-        if (Math.random() < (r.tail ? .95 : .6)) spawn(r.x, r.y, rand(-.2, .2), rand(.1, .6), rand(8, r.tail ? 26 : 18), r.tail ? C.gold : C.amber, r.tail ? 1.2 : .9,
+        if (r.tail > 1) {   // 粗亮的彗尾：沿途洒下一串慢慢下坠的火星
+          for (let j = 0; j < 2; j++) spawn(r.x - r.vx * dt * j * .5, r.y - r.vy * dt * j * .5, rand(-.35, .35), rand(-.1, .7), rand(26, 58), Math.random() < .3 ? C.white : r.tc || C.gold, 1.5,
+            { drag: .95, grav: .03, hold: 1, hot: .15, head: 2, glit: .1, front: r.front });
+        } else if (Math.random() < (r.tail ? .95 : .6)) spawn(r.x, r.y, rand(-.2, .2), rand(.1, .6), rand(8, r.tail ? 26 : 18), r.tc || (r.tail ? C.gold : C.amber), r.tail ? 1.2 : .9,
           { drag: .93, grav: .02, hold: 1, hot: 0, head: 0, glit: r.tail ? .08 : 0, front: r.front });
-        if (r.fuse ? r.age >= r.fuse : r.vy >= -.9) { rockets.splice(i, 1); burst(r.x, r.y, r.type, r.o); }
+        if (r.fuse ? r.age >= r.fuse : r.vy >= -.9) { rockets.splice(i, 1); if (!r.o.silent) burst(r.x, r.y, r.type, r.o); }
       }
 
       for (let i = parts.length - 1; i >= 0; i--) {
@@ -398,6 +449,7 @@
           continue;
         }
         const d = Math.pow(p.drag, dt);
+        if (p.wander) { p.vx += rand(-p.wander, p.wander) * k * dt; p.vy += rand(-p.wander, p.wander) * k * dt; }
         p.vx *= d; p.vy = p.vy * d + p.grav * k * dt;
         p.px = p.x; p.py = p.y; p.x += p.vx * dt; p.y += p.vy * dt;
         if (p.trail && parts.length < MAX * .85 && Math.random() < p.trail * dt * q)
@@ -438,9 +490,9 @@
         const p = parts[i], ctx = p.front ? fctx : bctx;
         const f = p.age / p.ttl;
         let a = 1 - f; a = a < p.hold ? a / p.hold : 1;
-        if (p.tw && f > .42 && Math.sin(p.age * p.tw + p.x * .7) > .15) a *= .1;
+        if (p.tw && f > p.tws && Math.sin(p.age * p.tw + p.x * .7) > .15) a *= .1;
         a *= .8 + Math.random() * .2;
-        const c = p.c2 && f > p.sw ? p.c2 : p.c, hot = f < p.hot;
+        const c = p.c2 && f > p.sw ? p.c2 : p.c, hot = f < p.hot && p.age < 9;   // 白热只在刚炸开的一瞬间，长寿命的星不能一直白着
         ctx.globalAlpha = a; ctx.lineWidth = p.size;
         ctx.strokeStyle = hot ? '#fffaf0' : f > .8 && !p.tw ? c.e : c.s;   // 白热 → 本色 → 余烬
         ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
@@ -457,14 +509,15 @@
       }
       for (let i = 0; i < rockets.length; i++) {
         const r = rockets[i], ctx = r.front ? fctx : bctx;
-        ctx.globalAlpha = .95; ctx.strokeStyle = C.gold.s; ctx.lineWidth = (r.tail ? 2 : 1.5) * Math.sqrt(k);
+        const rc = r.tc || C.gold;
+        ctx.globalAlpha = .95; ctx.strokeStyle = rc.s; ctx.lineWidth = (r.tail > 1 ? 3 : r.tail ? 2 : 1.5) * Math.sqrt(k);
         ctx.beginPath(); ctx.moveTo(r.px, r.py); ctx.lineTo(r.x, r.y); ctx.stroke();
-        const s = (r.tail ? 7 : 5) * Math.sqrt(k);
-        ctx.globalAlpha = .8; ctx.drawImage(C.gold.sp, r.x - s, r.y - s, s * 2, s * 2);
+        const s = (r.tail > 1 ? 11 : r.tail ? 7 : 5) * Math.sqrt(k);
+        ctx.globalAlpha = .8; ctx.drawImage(rc.sp, r.x - s, r.y - s, s * 2, s * 2);
       }
       for (let i = 0; i < flashes.length; i++) {   // 炸开瞬间的白热核心与星芒
         const fl = flashes[i], ctx = fl.front ? fctx : bctx;
-        ctx.globalAlpha = 1; radial(ctx, fl.x, fl.y, fl.r * (1.5 - fl.i * .5), C.white, fl.i * .95);
+        ctx.globalAlpha = 1; radial(ctx, fl.x, fl.y, fl.r * (1.5 - fl.i * .5), C.white, fl.i * .8);
         const g = fl.r * 2.6 * fl.i;
         ctx.globalAlpha = fl.i * .9; ctx.drawImage(GLINT, fl.x - g, fl.y - g, g * 2, g * 2);
       }
@@ -493,7 +546,7 @@
           shake *= Math.pow(.86, dt); shaking = true;
         } else if (shaking) { cv.stage.style.transform = ''; shaking = false; shake = 0; }
       }
-      const busy = parts.length || rockets.length || lights.length || smokes.length;
+      const busy = parts.length || rockets.length || lights.length || smokes.length || pixies.length;
       idle = busy ? 0 : idle + 1;
       if (idle > 45) {
         if (idle === 46) { bctx.clearRect(0, 0, w, h); gctx.clearRect(0, 0, gw, gh); g2ctx.clearRect(0, 0, gw, gh); lctx.clearRect(0, 0, lw, lh); mctx.clearRect(0, 0, lw, lh); rctx.clearRect(0, 0, gw, rh); }
@@ -503,7 +556,8 @@
       // 近泛光：夜空闪光 + 被照亮的硝烟 + 烟花本体
       gctx.globalCompositeOperation = 'source-over'; gctx.globalAlpha = 1; gctx.clearRect(0, 0, gw, gh);
       gctx.globalCompositeOperation = 'lighter';
-      if (!calm) for (const l of lights) radial(gctx, l.x / 4, l.y / 4, l.rad * 1.9 / 4, l.c, .22 * l.i);
+      const crowd = .22 / Math.max(1, lights.length / 5);   // 同时亮着的烟花越多，每一朵贡献的夜空辉光越少，避免整片泛白
+      if (!calm) for (const l of lights) radial(gctx, l.x / 4, l.y / 4, l.rad * 1.9 / 4, l.c, crowd * l.i);
       for (const m of smokes) {
         let lr = 0, lg = 0, lb = 0;
         for (const l of lights) {
@@ -571,6 +625,9 @@
       wish(text) { textBurst(text, w / 2, L.hy * .5, Math.min(w * .86, 900), pick([C.gold, C.rose, C.cyan, C.white])); combs(C.gold); },
       setCalm(v) { calm = v; },
       setLevel(v) { level = Math.max(0, Math.min(2, v | 0)); },
+      get level() { return level; },
+      setShellScale(v) { gs = v; },   // 整体缩放礼花弹：横屏手机天空矮，原尺寸会互相糊住
+      cue: { C, at, launch, burst, comet, fan, combs, mine, field, streak, pixie, textBurst, fountain: mountFountain, shore: shoreFountain, mountVolley, row },
       get mode() { return mode; },
       stats() { return { parts: parts.length, rockets: rockets.length, lights: lights.length, q, mode }; }
     };

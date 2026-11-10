@@ -94,6 +94,16 @@
     for (let i = 1; i < 9; i++) s += bins[i];
     return s / (8 * 255);
   }
+  const EDGES = [1, 3, 6, 11, 19, 33, 58, 100, 170];
+  function bands(out) { // 8 段对数频带 0~1（要先调用过 bass() 才是当前帧的数据）
+    const ok = live() && analyser;
+    for (let k = 0; k < 8; k++) {
+      let s = 0;
+      if (ok) for (let i = EDGES[k]; i < EDGES[k + 1]; i++) s += bins[i];
+      out[k] = ok ? s / ((EDGES[k + 1] - EDGES[k]) * 255) : 0;
+    }
+    return out;
+  }
   function level() {    // 全频平均能量 0~1（八音盒这类没有低频的音乐用它）
     if (!live() || !analyser) return 0;
     let s = 0;
@@ -189,7 +199,7 @@
   };
 
   window.AudioKit = {
-    ensure, boom, crackle, hook, bass, level, Synth,
+    ensure, boom, crackle, hook, bass, level, bands, Synth,
     setSfx(v) { sfxOn = v; },
     setVolume(v) { volume = v; if (ctx && Synth.playing) musicGain.gain.setTargetAtTime(v, ctx.currentTime, .03); }
   };

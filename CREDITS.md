@@ -4,6 +4,7 @@
 
 | 文件 | 作者 | 授权 | 原始页面 |
 |---|---|---|---|
+| images/castle.jpg | Dancorona21 | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Cinderella%27s_Castle_at_Night.jpg |
 | images/sydney.jpg | Poidabro | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Sydney_opera_house_and_Sydney_harbour_bridge.jpg |
 | images/taipei.jpg | 毛貓大少爺 | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Taipei_night_skyline_2020.png |
 | images/shanghai.jpg | King of Hearts | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Pudong_Shanghai_November_2017_HDR_panorama.jpg |
@@ -11,6 +12,8 @@
 | images/paris.jpg | Ladislav Luppa | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Paris_-_La_tour_Eiffel_de_nuit.jpg |
 | images/london.jpg | Pierre Alain Marchand | CC BY 3.0 | https://commons.wikimedia.org/wiki/File:Westminster_(59295502).jpeg |
 | images/newyork.jpg | VynedJ | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Lower_Manhattan_night_skyline_20261003_%E2%80%93_2.jpg |
+
+城堡一张缩到了 2800px 宽；原片夜空里自带的红色烟花在页面里被换成了干净的夜空，城堡上的彩色灯光是页面实时叠加的效果，不是原片内容。城堡建筑本身是迪士尼的作品，这张照片只适合个人、非商业使用。
 
 CC BY / CC BY-SA 要求署名并注明授权；页面左上角已随当前城市显示「摄影 作者 · 授权」并链接到原始页面。
 如果公开发布本站，请保留这些署名；CC BY-SA 的照片若再分发，需沿用相同授权。

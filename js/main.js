@@ -19,15 +19,19 @@
   const stage = $('stage');
   const fw = Fireworks(
     { back: $('fxBack'), front: $('fxFront'), glow: $('glow'), glow2: $('glow2'), light: $('light'), rim: $('rim'), reflect: $('reflect'), stage },
-    { onBurst: (size, pan, type) => AudioKit.boom(size, pan, type), onCrackle: a => AudioKit.crackle(a) });
+    { onBurst: (size, pan, type) => { AudioKit.boom(size, pan, type); if (show) show.pulse(size); }, onCrackle: a => AudioKit.crackle(a) });
+  let show = null;
   let scene = SCENES.find(s => s.id === prefs.scene) || SCENES[0];
   let layout = null, placeFmt = null;
 
   function build() {
-    const w = Math.max(320, window.innerWidth), h = Math.max(320, window.innerHeight), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    /* 以舞台元素的实际尺寸为准：iOS Safari 横屏时工具栏出现/收起，window.innerWidth 会和真正铺开的区域不一致 */
+    const w = Math.max(320, stage.clientWidth || window.innerWidth), h = Math.max(260, stage.clientHeight || window.innerHeight), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    builtW = w; builtH = h;
     layout = (scene.ph ? renderPhoto : renderScene)(scene, $('sky'), $('scene'), w, h, dpr);
     fw.resize(w, h, dpr);
     fw.setScene(layout, $('scene'));
+    show.setScene(layout, $('scene'), !!scene.show);
   }
   function paintPlace() {
     $('placeCity').textContent = scene.city;
@@ -79,8 +83,11 @@
   }
   tourBtn.addEventListener('click', () => setTour(tourBtn.getAttribute('aria-pressed') !== 'true'));
 
-  let resizeTimer;
-  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(build, 160); });
+  let resizeTimer, builtW = 0, builtH = 0;
+  const rebuild = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (Math.abs(stage.clientWidth - builtW) > 1 || Math.abs(stage.clientHeight - builtH) > 1) build(); }, 160); };
+  window.addEventListener('resize', rebuild);
+  window.addEventListener('orientationchange', rebuild);
+  if (window.ResizeObserver) new ResizeObserver(rebuild).observe(stage);
 
   /* ---------- 倒计时 ---------- */
   let tzMode = prefs.tz === 'city' ? 'city' : 'local';
@@ -124,7 +131,7 @@
       body.classList.add('is-' + st);
       if (st === 'celebrate') {
         $('celeYear').textContent = c.y;
-        if (c.since < 4000) fw.finale(String(c.y), wish); else fw.setMode('celebrate');
+        if (c.since < 4000) fw.finale(String(c.y), wish); else fw.setMode(scene.show ? 'show' : 'celebrate');
         $('srLive').textContent = `${c.y} 年到了，新年快乐！`;
       }
       state = st; lastBig = -1;
@@ -138,7 +145,7 @@
       setNum($('dM'), pad(Math.floor(s % 3600 / 60)));
       setNum($('dS'), pad(s % 60));
       $('eyebrow').textContent = tzMode === 'city' ? `距离${scene.city}迎来 ${c.y + 1} 年还有` : `距离 ${c.y + 1} 年还有`;
-      fw.setMode(c.remain <= 60000 ? 'build' : 'ambient');
+      fw.setMode(scene.show ? 'show' : c.remain <= 60000 ? 'build' : 'ambient');   // 城堡场景按演出脚本走，不随机燃放
     } else if (st === 'final') {
       const n = Math.max(1, Math.ceil(c.remain / 1000));
       if (n !== lastBig) {
@@ -149,6 +156,7 @@
       }
     } else {
       $('eyebrow').textContent = tzMode === 'city' ? `${scene.city}已经进入 ${c.y} 年` : `此刻，${c.y} 年已经到来`;
+      if (fw.mode !== 'finale') fw.setMode(scene.show ? 'show' : 'celebrate');
     }
   }
 
@@ -170,7 +178,7 @@
   function endPreview() {
     preview = false; offset = 0; force = true;
     previewBtn.textContent = '预演跨年'; previewBtn.classList.remove('on');
-    fw.setMode('ambient');
+    fw.setMode(scene.show ? 'show' : 'ambient');
   }
   previewBtn.addEventListener('click', () => { AudioKit.ensure(); preview ? endPreview() : startPreview(); });
 
@@ -370,7 +378,7 @@
     const lv = AudioKit.level();
     if (e < .05) e = lv * 1.6;
     beatAvg = beatAvg * .93 + e * .07;
-    if (e > beatAvg * 1.28 + .015 && e > .06 && t - lastBeat > 240) { lastBeat = t; fw.beat(Math.min(1, (e - beatAvg) * 4)); }
+    if (e > beatAvg * 1.28 + .015 && e > .06 && t - lastBeat > 240) { lastBeat = t; const s = Math.min(1, (e - beatAvg) * 4); fw.beat(s); show.beat(s); }
   }
 
   /* 自定义背景：和内置照片走同一套天空分离。存在音乐库同一个 IndexedDB 表里，用固定 id 区分 */
@@ -466,6 +474,7 @@
   if (calm.addEventListener) calm.addEventListener('change', e => fw.setCalm(e.matches));
 
   /* ---------- 启动 ---------- */
+  show = Show(fw, { proj: $('proj'), beams: $('beams'), stage });
   stage.classList.add('swap');
   build(); paintPlace(); paintTz(); paintMode(); paintTracks(); paintLevel(); wake();
   ensurePhoto(scene).then(() => {
@@ -491,9 +500,10 @@
     tick();
     rhythmTick(t);
     fw.frame(ms);
+    show.frame(ms);
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
-  window.__nye = { fw, get scene() { return scene; }, get layout() { return layout; }, tick: () => { force = true; tick(); }, get state() { return state; }, get tracks() { return tracks; }, addFiles };
+  window.__nye = { fw, show, frame: ms => { fw.frame(ms); show.frame(ms); }, get scene() { return scene; }, get layout() { return layout; }, tick: () => { force = true; tick(); }, get state() { return state; }, get tracks() { return tracks; }, addFiles };
 })();

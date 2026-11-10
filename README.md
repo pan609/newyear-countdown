@@ -10,6 +10,7 @@
 
 ## 结构
 
+- `js/show.js` 童话城堡的烟花秀：城堡投影、探照光柱、按时间轴编排的对称演出
 - `js/scenes.js` 城市与地标：实景照片的参数与天空抠图（`PHOTOS`、`computeMatte`），以及手绘版回退场景
 - `js/fireworks.js` 烟花引擎：粒子、编排、建筑受光、水面倒影、泛光与硝烟
 - `js/audio.js` 烟花音效与两首内置曲目（Web Audio 实时合成）
