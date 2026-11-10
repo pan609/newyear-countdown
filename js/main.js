@@ -184,8 +184,24 @@
   ];
   /* 本机自带的歌曲文件：存在才加入列表（公开发布的版本里不带这个文件） */
   const LOCAL_SONG = { id: 'f:nothings-gonna-change', name: "Nothing's Gonna Change My Love for You", url: 'music/nothings-gonna-change-my-love-for-you.mp3', fixed: true };
-  fetch(LOCAL_SONG.url, { method: 'HEAD' }).then(r => {
-    if (!r.ok) return;
+  /* 公开版本里这首歌是加密的（music/song.enc），口令放在分享链接的 # 后面，不会发给服务器 */
+  async function unlockSong() {
+    const m = location.hash.match(/k=([^&]+)/);
+    let key = m ? decodeURIComponent(m[1]) : null;
+    try { key = key || localStorage.getItem('nye.k'); } catch (e) { /* 忽略 */ }
+    if (!key || !window.crypto || !crypto.subtle) return false;
+    const res = await fetch('music/song.enc');
+    if (!res.ok) return false;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), 'PBKDF2', false, ['deriveKey']);
+    const aes = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: buf.slice(0, 16), iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(16, 28) }, aes, buf.slice(28));
+    LOCAL_SONG.url = URL.createObjectURL(new Blob([plain], { type: 'audio/mpeg' }));
+    try { localStorage.setItem('nye.k', key); } catch (e) { /* 忽略 */ }
+    return true;
+  }
+  fetch(LOCAL_SONG.url, { method: 'HEAD' }).then(r => r.ok || unlockSong()).then(ok => {
+    if (!ok) return;
     tracks.unshift(LOCAL_SONG);
     if (playing) { cur++; paintTracks(); } else select(prefs.track && prefs.track !== LOCAL_SONG.id ? Math.max(0, tracks.findIndex(t => t.id === prefs.track)) : 0, false);
   }).catch(() => {});
